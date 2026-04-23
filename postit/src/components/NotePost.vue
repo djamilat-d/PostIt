@@ -36,7 +36,7 @@
   <div class="notes-list">
     <div v-for="(note, index) in notes" :key="index" class="post-it-card" :style="{backgroundColor: note.color}">
       <h4>{{ note.title }}</h4>
-      <p>{{ Array.isArray(note.content)? note.content[0]: note.content }}</p>
+      <p v-if="note.content[0]>50">{{ Array.isArray(note.content)? note.content[0]: note.content.slice(0,50) }}...</p>
       <div style="display: flex;gap: 10px;justify-self: flex-start;margin-top: 15px;margin-bottom: 10px; margin-block-start: 50px;">
         <button @click="supprimerNote(note._id)">Supprimer</button>
         <button @click="Details(index)" style="">Voir plus +</button>
@@ -153,9 +153,10 @@ form {
   border: 1px solid #ccc;
   background-color: rgb(248, 221, 248);
   padding: 10px;
-  width: 150px;
+  width: auto;
   min-height: 150px;
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 2);
+
 }
 label{
   color: #0a0606;
