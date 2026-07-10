@@ -43,6 +43,18 @@
   --space-5: 32px;
 
   --nav-height: 64px;
+
+  /* couleur du texte posé directement sur le fond de page (titre, pagination,
+     nav...), pas sur une carte blanche/pastel */
+  --color-on-bg: #ffffff;
+  --shadow-on-bg-text: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* mode clair : fond clair, texte sombre. Les post-it et les cartes gardent
+   les mêmes couleurs dans les deux thèmes. */
+[data-theme='light'] {
+  --color-on-bg: #201538;
+  --shadow-on-bg-text: none;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -67,6 +79,16 @@ body {
   background-size: 180% 180%;
   animation: bgDrift 22s ease-in-out infinite alternate;
   overflow-x: hidden;
+  transition: background-color 0.2s ease;
+}
+
+[data-theme='light'] body {
+  background: radial-gradient(circle at 12% 18%, #ff3d8f22, transparent 42%),
+    radial-gradient(circle at 85% 12%, #00e0c622, transparent 40%),
+    radial-gradient(circle at 82% 82%, #7c3aed22, transparent 45%),
+    radial-gradient(circle at 15% 85%, #ffb80022, transparent 40%), #f4ecf7;
+  background-attachment: fixed;
+  background-size: 180% 180%;
 }
 
 @keyframes bgDrift {

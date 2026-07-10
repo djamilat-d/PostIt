@@ -1,11 +1,23 @@
 <template>
-  <article class="postit-card" :class="`postit-card--${note.color}`" :style="cardStyle">
+  <article
+    class="postit-card"
+    :class="[`postit-card--${note.color}`, { 'postit-card--dragging': isDragging }]"
+    :style="cardStyle"
+    draggable="true"
+    @dragstart="onDragStart"
+    @dragend="isDragging = false"
+    @dragover.prevent
+    @drop="onDrop"
+  >
     <span class="postit-card__tape"></span>
     <h4 class="postit-card__title">{{ note.title }}</h4>
     <p class="postit-card__excerpt">{{ excerpt }}</p>
     <div class="postit-card__actions">
       <button type="button" class="btn btn-danger btn-sm" @click="$emit('delete', note.id)">
         Supprimer
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" @click="$emit('duplicate', note.id)">
+        Dupliquer
       </button>
       <button type="button" class="btn btn-secondary btn-sm" @click="$emit('view', note.id)">
         Voir plus →
@@ -15,7 +27,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   note: {
@@ -28,7 +40,25 @@ const props = defineProps({
   },
 })
 
-defineEmits(['delete', 'view'])
+const emit = defineEmits(['delete', 'view', 'duplicate', 'reorder'])
+
+const isDragging = ref(false)
+
+// drag & drop natif (HTML5) pour réordonner la liste à la main. Le
+// composant se contente de transporter les deux ids concernés, la logique
+// de tri vit dans le store (voir reorderNotes).
+function onDragStart(event) {
+  isDragging.value = true
+  event.dataTransfer.setData('text/plain', String(props.note.id))
+  event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDrop(event) {
+  const fromId = event.dataTransfer.getData('text/plain')
+  if (fromId && fromId !== String(props.note.id)) {
+    emit('reorder', { fromId, toId: props.note.id })
+  }
+}
 
 const GRADIENTS = {
   orange: 'linear-gradient(150deg, var(--postit-orange-a), var(--postit-orange-b))',
@@ -61,9 +91,11 @@ const excerpt = computed(() => {
   flex-direction: column;
   box-shadow: var(--shadow-md);
   transform: rotate(-2deg);
+  cursor: grab;
   transition:
     transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.25s ease;
+    box-shadow 0.25s ease,
+    opacity 0.15s ease;
   animation: popIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
@@ -79,6 +111,10 @@ const excerpt = computed(() => {
   transform: rotate(0deg) scale(1.06) translateY(-6px);
   box-shadow: var(--shadow-glow);
   z-index: 2;
+}
+
+.postit-card--dragging {
+  opacity: 0.4;
 }
 
 .postit-card__tape {
@@ -114,6 +150,7 @@ const excerpt = computed(() => {
 
 .postit-card__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
 }

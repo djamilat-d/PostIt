@@ -1,11 +1,10 @@
 <script setup>
-
+import ToastContainer from '@/components/ToastContainer.vue'
 </script>
 
 <template>
-  <RouterView/>
+  <RouterView />
+  <ToastContainer />
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

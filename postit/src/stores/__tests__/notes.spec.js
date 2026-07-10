@@ -96,4 +96,38 @@ describe('notes store', () => {
     await expect(store.deleteNote('1')).rejects.toThrow('Ressource not found')
     expect(store.notes).toHaveLength(1)
   })
+
+  it('reorderNotes déplace une note à côté d\'une autre et retient cet ordre', async () => {
+    // on fixe un ordre de départ connu (sinon le tri par récence, basé sur
+    // Date.now(), rendrait l'ordre initial non-déterministe dans le test)
+    localStorage.setItem('postit_order', JSON.stringify(['1', '2', '3']))
+    const notes = [
+      { id: '1', title: 'A', content: [''], color: 'yellow' },
+      { id: '2', title: 'B', content: [''], color: 'yellow' },
+      { id: '3', title: 'C', content: [''], color: 'yellow' },
+    ]
+    notesApi.getNotes.mockResolvedValue(notes)
+    const store = useNotesStore()
+    await store.fetchNotes()
+    expect(store.notes.map((n) => n.id)).toEqual(['1', '2', '3'])
+
+    store.reorderNotes('1', '3') // A rejoint C : elle passe juste après elle
+
+    expect(store.notes.map((n) => n.id)).toEqual(['2', '3', '1'])
+    expect(JSON.parse(localStorage.getItem('postit_order'))).toEqual(['2', '3', '1'])
+  })
+
+  it('respecte un ordre manuel déjà sauvegardé au prochain fetchNotes', async () => {
+    localStorage.setItem('postit_order', JSON.stringify(['3', '1', '2']))
+    notesApi.getNotes.mockResolvedValue([
+      { id: '1', title: 'A', content: [''], color: 'yellow' },
+      { id: '2', title: 'B', content: [''], color: 'yellow' },
+      { id: '3', title: 'C', content: [''], color: 'yellow' },
+    ])
+    const store = useNotesStore()
+
+    await store.fetchNotes()
+
+    expect(store.notes.map((n) => n.id)).toEqual(['3', '1', '2'])
+  })
 })

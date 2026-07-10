@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import NotePost from '../NotePost.vue'
+import { useToastStore } from '@/stores/toast'
 import * as notesApi from '@/api/notes'
 
 vi.mock('@/api/notes')
@@ -25,7 +26,8 @@ async function mountNotePost() {
   await router.isReady()
   const wrapper = mount(NotePost, { global: { plugins: [pinia, router] } })
   await flushPromises()
-  return { wrapper, router }
+  const toastStore = useToastStore(pinia)
+  return { wrapper, router, toastStore }
 }
 
 describe('NotePost', () => {
@@ -72,7 +74,10 @@ describe('NotePost', () => {
     notesApi.deleteNote.mockResolvedValue(true)
     const { wrapper } = await mountNotePost()
 
-    await wrapper.findAll('.btn-danger')[0].trigger('click')
+    // l'ordre affiché dépend du tri par récence, donc on cible la carte
+    // "Courses" (id '1') explicitement plutôt que "la première carte"
+    const courseCard = wrapper.findAll('.postit-card').find((card) => card.text().includes('Courses'))
+    await courseCard.find('.btn-danger').trigger('click')
     await flushPromises()
 
     // la modale est téléportée dans document.body
@@ -84,5 +89,85 @@ describe('NotePost', () => {
     await flushPromises()
 
     expect(notesApi.deleteNote).toHaveBeenCalledWith('1')
+  })
+
+  it('affiche 9 notes par page et permet de naviguer entre les pages', async () => {
+    const manyNotes = Array.from({ length: 12 }, (_, i) => ({
+      id: String(i + 1),
+      title: `Note ${i + 1}`,
+      content: ['x'],
+      color: 'yellow',
+    }))
+    notesApi.getNotes.mockResolvedValue(manyNotes)
+    const { wrapper } = await mountNotePost()
+
+    expect(wrapper.findAll('.postit-card')).toHaveLength(9)
+    expect(wrapper.find('.pagination__info').text()).toBe('Page 1 / 2')
+    expect(wrapper.findAll('.pagination button')[0].attributes('disabled')).toBeDefined()
+
+    await wrapper.findAll('.pagination button')[1].trigger('click') // Suivant
+
+    expect(wrapper.findAll('.postit-card')).toHaveLength(3)
+    expect(wrapper.find('.pagination__info').text()).toBe('Page 2 / 2')
+    expect(wrapper.findAll('.pagination button')[1].attributes('disabled')).toBeDefined()
+  })
+
+  it('ne montre pas la pagination quand tout tient sur une page', async () => {
+    notesApi.getNotes.mockResolvedValue(notes)
+    const { wrapper } = await mountNotePost()
+
+    expect(wrapper.find('.pagination').exists()).toBe(false)
+  })
+
+  it('affiche un toast de succès après une création', async () => {
+    notesApi.getNotes.mockResolvedValue([])
+    notesApi.createNote.mockResolvedValue({ id: '9', title: 'Nouvelle', content: ['x'], color: 'orange' })
+    const { wrapper, toastStore } = await mountNotePost()
+
+    await wrapper.find('.btn-primary').trigger('click') // ouvre le formulaire
+    await wrapper.find('#note-title').setValue('Nouvelle')
+    await wrapper.find('#note-content').setValue('x')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(toastStore.toasts.map((t) => t.message)).toContain('Post-it ajouté')
+  })
+
+  it('duplique une note existante', async () => {
+    notesApi.getNotes.mockResolvedValue(notes)
+    notesApi.createNote.mockResolvedValue({
+      id: '3',
+      title: 'Courses (copie)',
+      content: ['Lait'],
+      color: 'yellow',
+    })
+    const { wrapper, toastStore } = await mountNotePost()
+
+    const courseCard = wrapper.findAll('.postit-card').find((card) => card.text().includes('Courses'))
+    const duplicateButton = courseCard.findAll('button').find((btn) => btn.text() === 'Dupliquer')
+    await duplicateButton.trigger('click')
+    await flushPromises()
+
+    expect(notesApi.createNote).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Courses (copie)' }),
+    )
+    expect(toastStore.toasts.map((t) => t.message)).toContain('Post-it dupliqué')
+  })
+
+  it('réordonne les notes quand une carte est déposée sur une autre', async () => {
+    notesApi.getNotes.mockResolvedValue(notes)
+    const { wrapper } = await mountNotePost()
+
+    // l'ordre initial dépend du tri par récence (non déterministe à la
+    // milliseconde près), donc on repère dynamiquement où est "Sport" et on
+    // y dépose "Courses" (id '1') dessus : pour 2 notes, ça doit toujours
+    // inverser l'ordre affiché.
+    const initialTitles = wrapper.findAll('.postit-card__title').map((t) => t.text())
+    const targetIndex = initialTitles.indexOf('Sport')
+    const cards = wrapper.findAll('.postit-card')
+    await cards[targetIndex].trigger('drop', { dataTransfer: { getData: () => '1' } })
+
+    const titlesAfter = wrapper.findAll('.postit-card__title').map((t) => t.text())
+    expect(titlesAfter).toEqual([...initialTitles].reverse())
   })
 })

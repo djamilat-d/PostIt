@@ -4,7 +4,11 @@
 
     <button type="button" class="btn btn-secondary" @click="router.push('/')">← Retour</button>
 
-    <p v-if="loading" class="state-message">Chargement…</p>
+    <div v-if="loading" class="postit-detail postit-detail-skeleton" aria-hidden="true">
+      <div class="postit-skeleton__line postit-skeleton__line--title"></div>
+      <div class="postit-skeleton__line"></div>
+      <div class="postit-skeleton__line postit-skeleton__line--short"></div>
+    </div>
     <div v-else-if="error" class="state-message state-message--error">
       <p>{{ error }}</p>
       <button type="button" class="btn btn-secondary" @click="retry">Réessayer</button>
@@ -22,6 +26,7 @@
         </p>
         <div class="postit-detail__actions">
           <button type="button" class="btn btn-danger" @click="pendingDelete = true">Supprimer</button>
+          <button type="button" class="btn btn-secondary" @click="handleDuplicate">Dupliquer</button>
           <button type="button" class="btn btn-primary" @click="isEditing = true">Modifier</button>
         </div>
       </article>
@@ -45,6 +50,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
+import { useToastStore } from '@/stores/toast'
 import AppHeader from '@/components/AppHeader.vue'
 import NoteModifier from '@/components/NoteModifier.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -58,6 +64,7 @@ const props = defineProps({
 
 const router = useRouter()
 const notesStore = useNotesStore()
+const toastStore = useToastStore()
 const isEditing = ref(false)
 const loading = ref(false)
 const error = ref(null)
@@ -86,6 +93,7 @@ async function handleUpdate(payload) {
   try {
     await notesStore.updateNote(props.id, payload)
     isEditing.value = false
+    toastStore.success('Post-it modifié')
   } catch {
     // erreur déjà stockée dans notesStore.error
   }
@@ -93,8 +101,28 @@ async function handleUpdate(payload) {
 
 async function handleDelete() {
   pendingDelete.value = false
-  await notesStore.deleteNote(props.id)
-  router.push('/')
+  try {
+    await notesStore.deleteNote(props.id)
+    toastStore.success('Post-it supprimé')
+    router.push('/')
+  } catch {
+    toastStore.error(notesStore.error || 'Erreur lors de la suppression')
+  }
+}
+
+async function handleDuplicate() {
+  if (!note.value) return
+  try {
+    const created = await notesStore.createNote({
+      title: `${note.value.title} (copie)`,
+      content: note.value.content,
+      color: note.value.color,
+    })
+    toastStore.success('Post-it dupliqué')
+    router.push({ name: 'detail-note', params: { id: created.id } })
+  } catch {
+    toastStore.error(notesStore.error || 'Erreur lors de la duplication')
+  }
 }
 </script>
 
@@ -108,6 +136,38 @@ async function handleDelete() {
   box-shadow: var(--shadow-md);
   transform: rotate(-1deg);
   animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.postit-detail-skeleton {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.postit-skeleton__line {
+  height: 14px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.5) 25%, rgba(255, 255, 255, 0.85) 37%, rgba(255, 255, 255, 0.5) 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+
+.postit-skeleton__line--title {
+  height: 24px;
+  width: 50%;
+  margin-bottom: 20px;
+}
+
+.postit-skeleton__line--short {
+  width: 35%;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 .postit-detail__tape {

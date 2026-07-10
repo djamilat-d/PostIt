@@ -77,4 +77,28 @@ describe('Post-it notes', () => {
     cy.contains('a', "Retour à l'accueil").click()
     cy.url().should('eq', Cypress.config().baseUrl + '/')
   })
+
+  it('duplicates a note from the list', () => {
+    cy.intercept('POST', '**/notes', { note_id: '2' }).as('createNote')
+    cy.visit('/')
+    cy.wait('@getNotes')
+
+    cy.contains('.postit-card', 'Courses').contains('button', 'Dupliquer').click()
+
+    cy.wait('@createNote')
+      .its('request.body')
+      .should('deep.include', { title: 'Courses (copie)' })
+    cy.contains('.postit-card__title', 'Courses (copie)')
+  })
+
+  it('toggles between dark and light theme', () => {
+    cy.visit('/')
+    cy.wait('@getNotes')
+
+    cy.get('html').should('not.have.attr', 'data-theme')
+    cy.contains('button', 'Mode clair').click()
+    cy.get('html').should('have.attr', 'data-theme', 'light')
+    cy.contains('button', 'Mode sombre').click()
+    cy.get('html').should('not.have.attr', 'data-theme')
+  })
 })

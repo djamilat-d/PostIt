@@ -5,11 +5,30 @@
     </router-link>
     <nav class="app-header__nav">
       <router-link to="/" class="app-header__link">Accueil</router-link>
+      <button type="button" class="app-header__theme-toggle" @click="toggleTheme">
+        {{ isLight ? 'Mode sombre' : 'Mode clair' }}
+      </button>
     </nav>
   </header>
 </template>
 
-<script setup></script>
+<script setup>
+import { ref } from 'vue'
+
+const THEME_STORAGE_KEY = 'postit_theme'
+const isLight = ref(document.documentElement.dataset.theme === 'light')
+
+function toggleTheme() {
+  isLight.value = !isLight.value
+  if (isLight.value) {
+    document.documentElement.dataset.theme = 'light'
+    localStorage.setItem(THEME_STORAGE_KEY, 'light')
+  } else {
+    delete document.documentElement.dataset.theme
+    localStorage.setItem(THEME_STORAGE_KEY, 'dark')
+  }
+}
+</script>
 
 <style scoped>
 .app-header {
@@ -55,7 +74,7 @@
 .app-header__link {
   position: relative;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-on-bg);
   padding-bottom: 2px;
 }
 
@@ -78,10 +97,33 @@
   width: 100%;
 }
 
+.app-header__theme-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: var(--color-on-bg);
+  font-weight: 700;
+  font-size: 0.85em;
+  padding: 6px 14px;
+  border-radius: 999px;
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.app-header__theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
 @media (max-width: 500px) {
   .app-header {
     width: 94%;
     padding: 0 12px;
+  }
+
+  .app-header__theme-toggle {
+    padding: 6px 10px;
+    font-size: 0.75em;
   }
 }
 </style>

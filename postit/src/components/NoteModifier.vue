@@ -3,10 +3,24 @@
     <h3>{{ isEdit ? 'Modifier le post-it' : 'Nouveau post-it' }}</h3>
 
     <label for="note-title">Titre :</label>
-    <input id="note-title" v-model.trim="form.title" required placeholder="Titre de la note" />
+    <input
+      id="note-title"
+      v-model.trim="form.title"
+      required
+      :maxlength="TITLE_MAX_LENGTH"
+      placeholder="Titre de la note"
+    />
+    <p class="char-count">{{ form.title.length }}/{{ TITLE_MAX_LENGTH }}</p>
 
     <label for="note-content">Contenu :</label>
-    <textarea id="note-content" v-model.trim="form.content" required placeholder="Contenu..."></textarea>
+    <textarea
+      id="note-content"
+      v-model.trim="form.content"
+      required
+      :maxlength="CONTENT_MAX_LENGTH"
+      placeholder="Contenu..."
+    ></textarea>
+    <p class="char-count">{{ form.content.length }}/{{ CONTENT_MAX_LENGTH }}</p>
 
     <label id="note-color-label">Couleur :</label>
     <div class="color-picker" role="radiogroup" aria-labelledby="note-color-label">
@@ -28,13 +42,13 @@
       <button type="submit" class="btn btn-primary btn-block">
         {{ isEdit ? 'Enregistrer' : 'Ajouter' }}
       </button>
-      <button type="button" class="btn btn-secondary" @click="$emit('cancel')">Annuler</button>
+      <button type="button" class="btn btn-secondary" @click="handleCancel">Annuler</button>
     </div>
   </form>
 </template>
 
 <script setup>
-import { reactive, computed, watch } from 'vue'
+import { reactive, computed, watch, nextTick } from 'vue'
 
 const props = defineProps({
   note: {
@@ -47,6 +61,9 @@ const emit = defineEmits(['submit', 'cancel'])
 
 const isEdit = computed(() => !!props.note)
 
+const TITLE_MAX_LENGTH = 60
+const CONTENT_MAX_LENGTH = 500
+
 const COLORS = [
   { value: 'orange', label: 'Orange', gradient: 'linear-gradient(150deg, var(--postit-orange-a), var(--postit-orange-b))' },
   { value: 'yellow', label: 'Jaune', gradient: 'linear-gradient(150deg, var(--postit-yellow-a), var(--postit-yellow-b))' },
@@ -54,6 +71,27 @@ const COLORS = [
   { value: 'blue', label: 'Bleu', gradient: 'linear-gradient(150deg, var(--postit-blue-a), var(--postit-blue-b))' },
   { value: 'pink', label: 'Rose', gradient: 'linear-gradient(150deg, var(--postit-pink-a), var(--postit-pink-b))' },
 ]
+
+// Le brouillon d'une nouvelle note (pas d'une édition) est gardé en
+// localStorage pour pas le perdre si on quitte la page par accident avant
+// d'avoir cliqué sur "Ajouter".
+const DRAFT_STORAGE_KEY = 'postit_draft'
+
+function loadDraft() {
+  try {
+    return JSON.parse(localStorage.getItem(DRAFT_STORAGE_KEY))
+  } catch {
+    return null
+  }
+}
+
+function saveDraft() {
+  localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(form))
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_STORAGE_KEY)
+}
 
 const form = reactive({
   title: '',
@@ -63,17 +101,27 @@ const form = reactive({
 
 function fillFromNote(note) {
   if (!note) {
-    form.title = ''
-    form.content = ''
-    form.color = 'orange'
+    const draft = loadDraft()
+    form.title = (draft?.title || '').slice(0, TITLE_MAX_LENGTH)
+    form.content = (draft?.content || '').slice(0, CONTENT_MAX_LENGTH)
+    form.color = draft?.color || 'orange'
     return
   }
-  form.title = note.title || ''
-  form.content = Array.isArray(note.content) ? note.content.join('\n') : note.content || ''
+  const rawContent = Array.isArray(note.content) ? note.content.join('\n') : note.content || ''
+  form.title = (note.title || '').slice(0, TITLE_MAX_LENGTH)
+  form.content = rawContent.slice(0, CONTENT_MAX_LENGTH)
   form.color = note.color || 'orange'
 }
 
 watch(() => props.note, fillFromNote, { immediate: true })
+
+// on sauvegarde à chaque frappe, mais seulement en mode création
+watch(
+  () => [form.title, form.content, form.color],
+  () => {
+    if (!isEdit.value) saveDraft()
+  },
+)
 
 function handleSubmit() {
   emit('submit', {
@@ -82,8 +130,19 @@ function handleSubmit() {
     color: form.color,
   })
   if (!isEdit.value) {
-    fillFromNote(null)
+    form.title = ''
+    form.content = ''
+    form.color = 'orange'
+    // le watcher ci-dessus va re-sauvegarder un brouillon (vide) suite au
+    // reset des champs, donc on efface pour de vrai une fois que ça s'est
+    // calmé
+    nextTick(clearDraft)
   }
+}
+
+function handleCancel() {
+  if (!isEdit.value) clearDraft()
+  emit('cancel')
 }
 </script>
 
@@ -142,6 +201,13 @@ function handleSubmit() {
 .note-form textarea {
   min-height: 90px;
   resize: vertical;
+}
+
+.char-count {
+  margin: 4px 0 0;
+  text-align: right;
+  font-size: 0.75em;
+  color: var(--color-text-muted);
 }
 
 .color-picker {

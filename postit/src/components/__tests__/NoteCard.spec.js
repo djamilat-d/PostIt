@@ -20,8 +20,9 @@ describe('NoteCard', () => {
 
   it('emits "view" with the note id when "Voir plus" is clicked', async () => {
     const wrapper = mount(NoteCard, { props: { note } })
+    const viewButton = wrapper.findAll('button').find((btn) => btn.text().includes('Voir plus'))
 
-    await wrapper.find('.btn-secondary').trigger('click')
+    await viewButton.trigger('click')
 
     expect(wrapper.emitted('view')).toEqual([['42']])
   })
@@ -32,5 +33,23 @@ describe('NoteCard', () => {
     await wrapper.find('.btn-danger').trigger('click')
 
     expect(wrapper.emitted('delete')).toEqual([['42']])
+  })
+
+  it('emits "duplicate" with the note id when "Dupliquer" is clicked', async () => {
+    const wrapper = mount(NoteCard, { props: { note } })
+    const duplicateButton = wrapper.findAll('button').find((btn) => btn.text().includes('Dupliquer'))
+
+    await duplicateButton.trigger('click')
+
+    expect(wrapper.emitted('duplicate')).toEqual([['42']])
+  })
+
+  it('emits "reorder" when another card is dropped onto it', async () => {
+    const wrapper = mount(NoteCard, { props: { note } })
+    const dataTransfer = { getData: () => '7' }
+
+    await wrapper.find('.postit-card').trigger('drop', { dataTransfer })
+
+    expect(wrapper.emitted('reorder')).toEqual([[{ fromId: '7', toId: '42' }]])
   })
 })
