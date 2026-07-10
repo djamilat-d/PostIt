@@ -1,0 +1,205 @@
+/* ---------------------------------------------------------------------- */
+/* Design tokens                                                          */
+/* ---------------------------------------------------------------------- */
+:root {
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-hand: 'Kalam', cursive;
+
+  --color-bg-deep: #150e29;
+  --color-surface: #ffffff;
+  --color-text: #201538;
+  --color-text-muted: #6b6280;
+
+  --color-primary: #ff3d8f;
+  --color-primary-2: #7c3aed;
+  --color-accent: #00e0c6;
+  --color-danger: #ff4d5e;
+  --color-danger-dark: #d8303f;
+
+  /* Each post-it colour is a little duotone gradient, not a flat fill. */
+  --postit-orange-a: #ff9a56;
+  --postit-orange-b: #ff5e62;
+  --postit-yellow-a: #ffe45e;
+  --postit-yellow-b: #ffb800;
+  --postit-green-a: #7bf29c;
+  --postit-green-b: #14c98c;
+  --postit-blue-a: #5ee7ff;
+  --postit-blue-b: #4a7dff;
+  --postit-pink-a: #ff9ee6;
+  --postit-pink-b: #ff4fd8;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  --shadow-sm: 0 6px 16px rgba(21, 14, 41, 0.25);
+  --shadow-md: 0 14px 34px rgba(21, 14, 41, 0.4);
+  --shadow-glow: 0 0 0 3px rgba(255, 255, 255, 0.5), 0 14px 34px rgba(21, 14, 41, 0.45);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+
+  --nav-height: 64px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reset & base                                                           */
+/* ---------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-display);
+  color: var(--color-text);
+  background: radial-gradient(circle at 12% 18%, #ff3d8f55, transparent 42%),
+    radial-gradient(circle at 85% 12%, #00e0c655, transparent 40%),
+    radial-gradient(circle at 82% 82%, #7c3aed66, transparent 45%),
+    radial-gradient(circle at 15% 85%, #ffb80055, transparent 40%), var(--color-bg-deep);
+  background-attachment: fixed;
+  background-size: 180% 180%;
+  animation: bgDrift 22s ease-in-out infinite alternate;
+  overflow-x: hidden;
+}
+
+@keyframes bgDrift {
+  0% {
+    background-position:
+      0% 0%,
+      100% 0%,
+      100% 100%,
+      0% 100%;
+  }
+  100% {
+    background-position:
+      10% 10%,
+      90% 15%,
+      85% 90%,
+      15% 85%;
+  }
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--color-text);
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+a {
+  color: var(--color-primary-2);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: calc(var(--nav-height) + var(--space-4)) var(--space-4) var(--space-5);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Buttons                                                                */
+/* ---------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-size: 0.92em;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition:
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.18s ease,
+    filter 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:hover {
+  transform: translateY(-3px) scale(1.03);
+  filter: brightness(1.06);
+}
+
+.btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-2));
+  color: #fff;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: var(--color-text);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--color-danger), var(--color-danger-dark));
+  color: #fff;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Feedback states                                                        */
+/* ---------------------------------------------------------------------- */
+.state-message {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.state-message--error {
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-danger), var(--color-danger-dark));
+}
+
+/* ---------------------------------------------------------------------- */
+/* Shared entrance animation                                              */
+/* ---------------------------------------------------------------------- */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Responsive helpers                                                     */
+/* ---------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .page {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+}

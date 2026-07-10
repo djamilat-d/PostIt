@@ -10,11 +10,14 @@ const router = createRouter({
       name: 'home',
       component: NotePost,
     },
+    // route dynamique: l'id est dans l'url (/note/42) et arrive
+    // directement en prop dans NoteDetail
     {
-      path: '/details',
+      path: '/note/:id',
       name: 'detail-note',
       component: NoteDetail,
-    }
+      props: true,
+    },
   ],
 })
 

@@ -1,66 +1,75 @@
-# postit
+# Post-it
 
-This template should help get you started developing with Vue 3 in Vite.
+Projet C-DEV-121 (MVVM frameworks) - une petite appli de gestion de post-it en Vue 3.
 
-## Recommended IDE Setup
+On peut créer, voir, modifier et supprimer des post-it. Les notes sont stockées via une API distante (pas de backend fait maison ici).
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Fonctionnalités
 
-## Recommended Browser Setup
+- liste des post-it sur la page d'accueil
+- page détail par note (`/note/:id`)
+- création / modification / suppression
+- couleurs personnalisables par note
+- responsive, un peu de style pour que ce soit pas trop moche
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## Stack
 
-## Customize configuration
+- Vite + Vue 3 (Composition API, `<script setup>`)
+- Vue Router (avec route dynamique `/note/:id`)
+- Pinia pour le state (équivalent de Vuex, plus simple à écrire)
+- fetch natif pour les appels API
+- Vitest + @vue/test-utils pour les tests unitaires, Cypress pour l'e2e
+- oxlint / eslint / oxfmt pour le lint
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+## Organisation du code
 
-## Project Setup
+- `src/api/notes.js` : tous les appels fetch vers l'API sont ici, rien d'autre n'appelle fetch directement
+- `src/stores/notes.js` : store Pinia, garde l'état (notes, loading, error) et expose les actions (fetchNotes, createNote, etc)
+- `src/components/` : les vues et composants
+  - `NotePost.vue` = page liste
+  - `NoteDetail.vue` = page détail / édition
+  - `NoteCard.vue` = carte d'une note dans la liste
+  - `NoteModifier.vue` = le formulaire, utilisé pour créer ET éditer
+  - `AppHeader.vue` = la nav
+
+Les composants ne font jamais de fetch eux-mêmes, ils passent toujours par le store.
+
+## Lancer le projet
 
 ```sh
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
+cp .env.example .env
 npm run dev
 ```
 
-### Compile and Minify for Production
+`VITE_API_BASE_URL` dans `.env` doit pointer vers l'API (par défaut `https://postit.zoul.dev`).
+
+Autres scripts utiles :
 
 ```sh
-npm run build
+npm run build         # build prod
+npm run test:unit      # tests unitaires
+npm run test:e2e:dev   # tests e2e en dev
+npm run lint          # oxlint + eslint
 ```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+## API utilisée
 
-```sh
-npm run test:unit
-```
+| Méthode | Route | Usage |
+| --- | --- | --- |
+| GET | `/notes` | liste des notes |
+| GET | `/notes/:id` | une note |
+| POST | `/notes` | créer |
+| PUT | `/notes/:id` | modifier |
+| DELETE | `/notes/:id` | supprimer |
 
-### Run End-to-End Tests with [Cypress](https://www.cypress.io/)
+La couleur n'est pas gérée côté API, donc elle est gardée en local (localStorage) par id de note.
 
-```sh
-npm run test:e2e:dev
-```
+## Tests
 
-This runs the end-to-end tests against the Vite development server.
-It is much faster than the production build.
+Unitaires sur le store et sur `NoteCard` / `NoteModifier` (API mockée). E2E dans `cypress/e2e/notes.cy.js`, avec l'API stubbée via `cy.intercept` pour pas dépendre du serveur.
 
-But it's still recommended to test the production build with `test:e2e` before deploying (e.g. in CI environments):
+## Idées si j'ai le temps
 
-```sh
-npm run build
-npm run test:e2e
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+- éviter de perdre la saisie du formulaire si on quitte la page en cours de création
+- recherche/filtre dans la liste si trop de notes
