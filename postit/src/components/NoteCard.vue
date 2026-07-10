@@ -5,7 +5,7 @@
     <p class="postit-card__excerpt">{{ excerpt }}</p>
     <div class="postit-card__actions">
       <button type="button" class="btn btn-danger btn-sm" @click="$emit('delete', note.id)">
-        🗑 Supprimer
+        Supprimer
       </button>
       <button type="button" class="btn btn-secondary btn-sm" @click="$emit('view', note.id)">
         Voir plus →

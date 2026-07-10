@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import NotePost from '@/components/NotePost.vue'
 import NoteDetail from '@/components/NoteDetail.vue'
+import NotFound from '@/components/NotFound.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,6 +18,12 @@ const router = createRouter({
       name: 'detail-note',
       component: NoteDetail,
       props: true,
+    },
+    // toute autre url tombe ici
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFound,
     },
   ],
 })

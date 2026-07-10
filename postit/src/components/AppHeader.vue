@@ -1,7 +1,6 @@
 <template>
   <header class="app-header">
     <router-link to="/" class="app-header__brand">
-      <span class="app-header__logo">🗒️</span>
       <span>Post-it</span>
     </router-link>
     <nav class="app-header__nav">
@@ -48,11 +47,6 @@
   color: transparent;
 }
 
-.app-header__logo {
-  font-size: 1.4em;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
-}
-
 .app-header__nav {
   display: flex;
   gap: 20px;
@@ -88,10 +82,6 @@
   .app-header {
     width: 94%;
     padding: 0 12px;
-  }
-
-  .app-header__brand span:last-child {
-    display: none;
   }
 }
 </style>

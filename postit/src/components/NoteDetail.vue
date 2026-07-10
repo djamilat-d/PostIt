@@ -5,7 +5,10 @@
     <button type="button" class="btn btn-secondary" @click="router.push('/')">← Retour</button>
 
     <p v-if="loading" class="state-message">Chargement…</p>
-    <p v-else-if="error" class="state-message state-message--error">{{ error }}</p>
+    <div v-else-if="error" class="state-message state-message--error">
+      <p>{{ error }}</p>
+      <button type="button" class="btn btn-secondary" @click="retry">Réessayer</button>
+    </div>
 
     <template v-else-if="note">
       <NoteModifier v-if="isEditing" :note="note" @submit="handleUpdate" @cancel="isEditing = false" />
@@ -18,8 +21,8 @@
           {{ Array.isArray(note.content) ? note.content.join('\n') : note.content }}
         </p>
         <div class="postit-detail__actions">
-          <button type="button" class="btn btn-danger" @click="handleDelete">🗑 Supprimer</button>
-          <button type="button" class="btn btn-primary" @click="isEditing = true">✏️ Modifier</button>
+          <button type="button" class="btn btn-danger" @click="pendingDelete = true">Supprimer</button>
+          <button type="button" class="btn btn-primary" @click="isEditing = true">Modifier</button>
         </div>
       </article>
     </template>
@@ -28,6 +31,13 @@
       <p>Cette note est introuvable.</p>
       <button type="button" class="btn btn-secondary" @click="router.push('/')">Retour à l'accueil</button>
     </div>
+
+    <ConfirmDialog
+      :open="pendingDelete"
+      message="Ce post-it sera supprimé définitivement."
+      @confirm="handleDelete"
+      @cancel="pendingDelete = false"
+    />
   </div>
 </template>
 
@@ -37,6 +47,7 @@ import { useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
 import AppHeader from '@/components/AppHeader.vue'
 import NoteModifier from '@/components/NoteModifier.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const props = defineProps({
   id: {
@@ -50,20 +61,26 @@ const notesStore = useNotesStore()
 const isEditing = ref(false)
 const loading = ref(false)
 const error = ref(null)
+const pendingDelete = ref(false)
 
 const note = computed(() => notesStore.getNoteById(props.id))
 
-onMounted(async () => {
+async function loadNote() {
   // si on arrive directement sur /note/:id (refresh de la page par ex),
   // le store est vide donc on va chercher juste cette note
-  if (!note.value) {
-    loading.value = true
-    error.value = null
-    const fetched = await notesStore.fetchNote(props.id)
-    error.value = fetched ? null : notesStore.error
-    loading.value = false
-  }
-})
+  if (note.value) return
+  loading.value = true
+  error.value = null
+  const fetched = await notesStore.fetchNote(props.id)
+  error.value = fetched ? null : notesStore.error
+  loading.value = false
+}
+
+onMounted(loadNote)
+
+function retry() {
+  loadNote()
+}
 
 async function handleUpdate(payload) {
   try {
@@ -75,7 +92,7 @@ async function handleUpdate(payload) {
 }
 
 async function handleDelete() {
-  if (!confirm('Supprimer ce post-it ?')) return
+  pendingDelete.value = false
   await notesStore.deleteNote(props.id)
   router.push('/')
 }

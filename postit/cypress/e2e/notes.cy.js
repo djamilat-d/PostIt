@@ -41,15 +41,40 @@ describe('Post-it notes', () => {
     cy.contains('h2', 'Courses')
   })
 
-  it('deletes a note from the list', () => {
+  it('deletes a note from the list after confirming in the modal', () => {
     cy.intercept('DELETE', '**/notes/1', {}).as('deleteNote')
     cy.visit('/')
     cy.wait('@getNotes')
 
-    cy.on('window:confirm', () => true)
     cy.contains('.postit-card', 'Courses').contains('button', 'Supprimer').click()
+    cy.get('.confirm-dialog').should('be.visible').contains('button', 'Supprimer').click()
 
     cy.wait('@deleteNote')
     cy.contains('Aucun post-it pour le moment')
+  })
+
+  it('edits an existing note from the detail page', () => {
+    cy.intercept('GET', '**/notes/1', { note: listNote }).as('getNote')
+    cy.intercept('PUT', '**/notes/1', { note_id: '1' }).as('updateNote')
+    cy.visit('/')
+    cy.wait('@getNotes')
+
+    cy.contains('.postit-card', 'Courses').contains('button', 'Voir plus').click()
+    cy.url().should('include', '/note/1')
+
+    cy.contains('button', 'Modifier').click()
+    cy.get('#note-title').clear()
+    cy.get('#note-title').type('Courses (maj)')
+    cy.contains('button', 'Enregistrer').click()
+
+    cy.wait('@updateNote')
+    cy.contains('h2', 'Courses (maj)')
+  })
+
+  it('shows a 404 page on an unknown route', () => {
+    cy.visit('/une-route-qui-existe-pas')
+    cy.contains('Page introuvable')
+    cy.contains('a', "Retour à l'accueil").click()
+    cy.url().should('eq', Cypress.config().baseUrl + '/')
   })
 })

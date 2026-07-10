@@ -2,10 +2,12 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import * as notesApi from '@/api/notes'
 
-// L'API ne sauvegarde pas la couleur du post-it, du coup on la garde à part
-// dans le localStorage (par id de note) pour pas la perdre au refresh. Le
-// titre et le contenu, eux, viennent toujours de l'API.
+// L'API ne sauvegarde ni la couleur ni une date de création, du coup on
+// garde ces deux trucs à part dans le localStorage (par id de note) pour
+// pas les perdre au refresh. Le titre et le contenu, eux, viennent
+// toujours de l'API.
 const COLORS_STORAGE_KEY = 'postit_colors'
+const CREATED_STORAGE_KEY = 'postit_created'
 
 function loadColors() {
   try {
@@ -21,10 +23,43 @@ function saveColor(id, color) {
   localStorage.setItem(COLORS_STORAGE_KEY, JSON.stringify(colors))
 }
 
-function applyStoredColor(note) {
+function loadCreated() {
+  try {
+    return JSON.parse(localStorage.getItem(CREATED_STORAGE_KEY)) || {}
+  } catch {
+    return {}
+  }
+}
+
+function saveCreated(id, timestamp) {
+  const created = loadCreated()
+  created[id] = timestamp
+  localStorage.setItem(CREATED_STORAGE_KEY, JSON.stringify(created))
+}
+
+// la première fois qu'on croise une note, on lui donne une date de
+// "découverte" qui sert de proxy pour trier par récence (l'api n'a pas de
+// created_at)
+function getOrAssignCreated(id) {
+  const created = loadCreated()
+  if (created[id]) return created[id]
+  const timestamp = Date.now()
+  saveCreated(id, timestamp)
+  return timestamp
+}
+
+function applyStoredMeta(note) {
   if (!note) return note
   const colors = loadColors()
-  return { ...note, color: colors[note.id] || note.color || 'yellow' }
+  return {
+    ...note,
+    color: colors[note.id] || note.color || 'yellow',
+    createdAt: getOrAssignCreated(note.id),
+  }
+}
+
+function sortByRecency(list) {
+  return [...list].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
 }
 
 export const useNotesStore = defineStore('notes', () => {
@@ -37,7 +72,7 @@ export const useNotesStore = defineStore('notes', () => {
     error.value = null
     try {
       const rawNotes = await notesApi.getNotes()
-      notes.value = rawNotes.map(applyStoredColor)
+      notes.value = sortByRecency(rawNotes.map(applyStoredMeta))
     } catch (err) {
       error.value = err.message
     } finally {
@@ -53,7 +88,7 @@ export const useNotesStore = defineStore('notes', () => {
     loading.value = true
     error.value = null
     try {
-      const note = applyStoredColor(await notesApi.getNote(id))
+      const note = applyStoredMeta(await notesApi.getNote(id))
       const index = notes.value.findIndex((n) => String(n.id) === String(id))
       if (index === -1) {
         notes.value.push(note)
@@ -74,7 +109,8 @@ export const useNotesStore = defineStore('notes', () => {
     try {
       const note = await notesApi.createNote(payload)
       if (payload.color) saveColor(note.id, payload.color)
-      notes.value.push(applyStoredColor(note))
+      saveCreated(note.id, Date.now())
+      notes.value = sortByRecency([...notes.value, applyStoredMeta(note)])
       return note
     } catch (err) {
       error.value = err.message
@@ -88,7 +124,7 @@ export const useNotesStore = defineStore('notes', () => {
       const note = await notesApi.updateNote(id, payload)
       if (payload.color) saveColor(id, payload.color)
       const index = notes.value.findIndex((n) => String(n.id) === String(id))
-      const merged = applyStoredColor(note)
+      const merged = applyStoredMeta(note)
       if (index === -1) {
         notes.value.push(merged)
       } else {

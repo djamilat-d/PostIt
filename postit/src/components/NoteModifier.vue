@@ -1,6 +1,6 @@
 <template>
   <form class="note-form" @submit.prevent="handleSubmit">
-    <h3>{{ isEdit ? '✏️ Modifier le post-it' : '✨ Nouveau post-it' }}</h3>
+    <h3>{{ isEdit ? 'Modifier le post-it' : 'Nouveau post-it' }}</h3>
 
     <label for="note-title">Titre :</label>
     <input id="note-title" v-model.trim="form.title" required placeholder="Titre de la note" />
@@ -21,14 +21,12 @@
         role="radio"
         :aria-checked="form.color === color.value"
         @click="form.color = color.value"
-      >
-        <span v-if="form.color === color.value" class="color-swatch__check">✓</span>
-      </button>
+      ></button>
     </div>
 
     <div class="note-form__actions">
       <button type="submit" class="btn btn-primary btn-block">
-        {{ isEdit ? '💾 Enregistrer' : '🚀 Ajouter' }}
+        {{ isEdit ? 'Enregistrer' : 'Ajouter' }}
       </button>
       <button type="button" class="btn btn-secondary" @click="$emit('cancel')">Annuler</button>
     </div>
@@ -173,12 +171,6 @@ function handleSubmit() {
 .color-swatch--active {
   border-color: var(--color-text);
   transform: scale(1.2);
-}
-
-.color-swatch__check {
-  color: #fff;
-  font-weight: 800;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .note-form__actions {
