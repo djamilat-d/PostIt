@@ -49,6 +49,7 @@
 
 <script setup>
 import { reactive, computed, watch, nextTick } from 'vue'
+import { NOTE_COLORS } from '@/constants/colors'
 
 const props = defineProps({
   note: {
@@ -64,13 +65,7 @@ const isEdit = computed(() => !!props.note)
 const TITLE_MAX_LENGTH = 60
 const CONTENT_MAX_LENGTH = 500
 
-const COLORS = [
-  { value: 'orange', label: 'Orange', gradient: 'linear-gradient(150deg, var(--postit-orange-a), var(--postit-orange-b))' },
-  { value: 'yellow', label: 'Jaune', gradient: 'linear-gradient(150deg, var(--postit-yellow-a), var(--postit-yellow-b))' },
-  { value: 'green', label: 'Vert', gradient: 'linear-gradient(150deg, var(--postit-green-a), var(--postit-green-b))' },
-  { value: 'blue', label: 'Bleu', gradient: 'linear-gradient(150deg, var(--postit-blue-a), var(--postit-blue-b))' },
-  { value: 'pink', label: 'Rose', gradient: 'linear-gradient(150deg, var(--postit-pink-a), var(--postit-pink-b))' },
-]
+const COLORS = NOTE_COLORS
 
 // Le brouillon d'une nouvelle note (pas d'une édition) est gardé en
 // localStorage pour pas le perdre si on quitte la page par accident avant

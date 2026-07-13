@@ -100,16 +100,77 @@ describe('NotePost', () => {
     }))
     notesApi.getNotes.mockResolvedValue(manyNotes)
     const { wrapper } = await mountNotePost()
+    const paginationButton = (label) =>
+      wrapper.findAll('.pagination button').find((btn) => btn.text() === label)
 
     expect(wrapper.findAll('.postit-card')).toHaveLength(9)
     expect(wrapper.find('.pagination__info').text()).toBe('Page 1 / 2')
-    expect(wrapper.findAll('.pagination button')[0].attributes('disabled')).toBeDefined()
+    expect(paginationButton('« Début').attributes('disabled')).toBeDefined()
+    expect(paginationButton('← Précédent').attributes('disabled')).toBeDefined()
+    expect(paginationButton('Suivant →').attributes('disabled')).toBeUndefined()
+    expect(paginationButton('Fin »').attributes('disabled')).toBeUndefined()
 
-    await wrapper.findAll('.pagination button')[1].trigger('click') // Suivant
+    await paginationButton('Suivant →').trigger('click')
 
     expect(wrapper.findAll('.postit-card')).toHaveLength(3)
     expect(wrapper.find('.pagination__info').text()).toBe('Page 2 / 2')
-    expect(wrapper.findAll('.pagination button')[1].attributes('disabled')).toBeDefined()
+    expect(paginationButton('Suivant →').attributes('disabled')).toBeDefined()
+    expect(paginationButton('Fin »').attributes('disabled')).toBeDefined()
+  })
+
+  it('les boutons Début et Fin sautent directement à la première/dernière page', async () => {
+    const manyNotes = Array.from({ length: 25 }, (_, i) => ({
+      id: String(i + 1),
+      title: `Note ${i + 1}`,
+      content: ['x'],
+      color: 'yellow',
+    }))
+    notesApi.getNotes.mockResolvedValue(manyNotes)
+    const { wrapper } = await mountNotePost()
+    const paginationButton = (label) =>
+      wrapper.findAll('.pagination button').find((btn) => btn.text() === label)
+
+    expect(wrapper.find('.pagination__info').text()).toBe('Page 1 / 3')
+
+    await paginationButton('Fin »').trigger('click')
+    expect(wrapper.find('.pagination__info').text()).toBe('Page 3 / 3')
+    expect(wrapper.findAll('.postit-card')).toHaveLength(7) // 25 - 2*9
+
+    await paginationButton('« Début').trigger('click')
+    expect(wrapper.find('.pagination__info').text()).toBe('Page 1 / 3')
+  })
+
+  it('filtre par couleur', async () => {
+    const mixed = [
+      { id: '1', title: 'Courses', content: ['x'], color: 'yellow' },
+      { id: '2', title: 'Sport', content: ['x'], color: 'blue' },
+    ]
+    notesApi.getNotes.mockResolvedValue(mixed)
+    const { wrapper } = await mountNotePost()
+
+    await wrapper.find('.color-chip[aria-label="Bleu"]').trigger('click')
+
+    expect(wrapper.text()).toContain('Sport')
+    expect(wrapper.text()).not.toContain('Courses')
+
+    await wrapper.find('.color-chip--all').trigger('click')
+
+    expect(wrapper.text()).toContain('Courses')
+    expect(wrapper.text()).toContain('Sport')
+  })
+
+  it('trie par titre quand on choisit "Titre (A → Z)"', async () => {
+    const mixed = [
+      { id: '1', title: 'Zebre', content: ['x'], color: 'yellow' },
+      { id: '2', title: 'Abricot', content: ['x'], color: 'blue' },
+    ]
+    notesApi.getNotes.mockResolvedValue(mixed)
+    const { wrapper } = await mountNotePost()
+
+    await wrapper.find('.sort-select').setValue('title')
+
+    const titles = wrapper.findAll('.postit-card__title').map((t) => t.text())
+    expect(titles).toEqual(['Abricot', 'Zebre'])
   })
 
   it('ne montre pas la pagination quand tout tient sur une page', async () => {

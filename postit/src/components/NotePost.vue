@@ -11,13 +11,36 @@
 
     <NoteModifier v-if="showForm" @submit="handleCreate" @cancel="showForm = false" />
 
-    <input
-      v-if="notesStore.notes.length > 0"
-      v-model="search"
-      type="search"
-      class="search-input"
-      placeholder="Rechercher un post-it..."
-    />
+    <div v-if="notesStore.notes.length > 0" class="filters">
+      <input v-model="search" type="search" class="search-input" placeholder="Rechercher un post-it..." />
+
+      <div class="color-filters" role="group" aria-label="Filtrer par couleur">
+        <button
+          type="button"
+          class="color-chip color-chip--all"
+          :class="{ 'color-chip--active': colorFilter === null }"
+          @click="colorFilter = null"
+        >
+          Toutes
+        </button>
+        <button
+          v-for="color in NOTE_COLORS"
+          :key="color.value"
+          type="button"
+          class="color-chip"
+          :class="{ 'color-chip--active': colorFilter === color.value }"
+          :style="{ background: color.gradient }"
+          :aria-label="color.label"
+          :aria-pressed="colorFilter === color.value"
+          @click="colorFilter = colorFilter === color.value ? null : color.value"
+        ></button>
+      </div>
+
+      <select v-model="sortBy" class="sort-select" aria-label="Trier par">
+        <option value="recent">Plus récentes</option>
+        <option value="title">Titre (A → Z)</option>
+      </select>
+    </div>
 
     <div v-if="notesStore.loading" class="notes-grid">
       <NoteCardSkeleton v-for="n in 6" :key="n" />
@@ -29,8 +52,8 @@
     <p v-else-if="notesStore.notes.length === 0" class="state-message">
       Aucun post-it pour le moment. Ajoute le premier !
     </p>
-    <p v-else-if="filteredNotes.length === 0" class="state-message">
-      Aucun résultat pour « {{ search }} ».
+    <p v-else-if="sortedNotes.length === 0" class="state-message">
+      Aucun résultat{{ search ? ` pour « ${search} »` : '' }}.
     </p>
 
     <template v-else>
@@ -48,6 +71,9 @@
       </div>
 
       <div v-if="totalPages > 1" class="pagination">
+        <button type="button" class="btn btn-secondary" :disabled="currentPage === 1" @click="currentPage = 1">
+          « Début
+        </button>
         <button type="button" class="btn btn-secondary" :disabled="currentPage === 1" @click="currentPage--">
           ← Précédent
         </button>
@@ -59,6 +85,14 @@
           @click="currentPage++"
         >
           Suivant →
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="currentPage === totalPages"
+          @click="currentPage = totalPages"
+        >
+          Fin »
         </button>
       </div>
     </template>
@@ -77,6 +111,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotesStore } from '@/stores/notes'
 import { useToastStore } from '@/stores/toast'
+import { NOTE_COLORS } from '@/constants/colors'
 import AppHeader from '@/components/AppHeader.vue'
 import NoteCard from '@/components/NoteCard.vue'
 import NoteCardSkeleton from '@/components/NoteCardSkeleton.vue'
@@ -90,6 +125,8 @@ const notesStore = useNotesStore()
 const toastStore = useToastStore()
 const showForm = ref(false)
 const search = ref('')
+const colorFilter = ref(null)
+const sortBy = ref('recent')
 const pendingDeleteId = ref(null)
 const currentPage = ref(1)
 
@@ -98,24 +135,41 @@ onMounted(() => {
 })
 
 const filteredNotes = computed(() => {
+  let list = notesStore.notes
+
+  if (colorFilter.value) {
+    list = list.filter((note) => note.color === colorFilter.value)
+  }
+
   const query = search.value.trim().toLowerCase()
-  if (!query) return notesStore.notes
-  return notesStore.notes.filter((note) => {
-    const content = Array.isArray(note.content) ? note.content.join(' ') : note.content || ''
-    return note.title.toLowerCase().includes(query) || content.toLowerCase().includes(query)
-  })
+  if (query) {
+    list = list.filter((note) => {
+      const content = Array.isArray(note.content) ? note.content.join(' ') : note.content || ''
+      return note.title.toLowerCase().includes(query) || content.toLowerCase().includes(query)
+    })
+  }
+
+  return list
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredNotes.value.length / PAGE_SIZE)))
+const sortedNotes = computed(() => {
+  if (sortBy.value === 'title') {
+    return [...filteredNotes.value].sort((a, b) => a.title.localeCompare(b.title, 'fr'))
+  }
+  // 'recent' : déjà trié par récence par le store, on ne touche à rien
+  return filteredNotes.value
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(sortedNotes.value.length / PAGE_SIZE)))
 
 const pagedNotes = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE
-  return filteredNotes.value.slice(start, start + PAGE_SIZE)
+  return sortedNotes.value.slice(start, start + PAGE_SIZE)
 })
 
-// on revient à la page 1 dès qu'on cherche autre chose, et on recale si la
-// page courante n'existe plus (ex: suppression de notes)
-watch(search, () => {
+// on revient à la page 1 dès que le filtre/tri/recherche change, et on
+// recale si la page courante n'existe plus (ex: suppression de notes)
+watch([search, colorFilter, sortBy], () => {
   currentPage.value = 1
 })
 
@@ -190,11 +244,18 @@ function goToDetail(id) {
   letter-spacing: 0.5px;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
 .search-input {
   display: block;
   width: 100%;
   max-width: 340px;
-  margin-bottom: var(--space-4);
   padding: 10px 16px;
   border: none;
   border-radius: 999px;
@@ -206,6 +267,58 @@ function goToDetail(id) {
 
 .search-input:focus {
   outline: 2px solid var(--color-primary);
+}
+
+.color-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-chip {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.color-chip:hover {
+  transform: scale(1.15);
+}
+
+.color-chip--active {
+  border-color: var(--color-on-bg);
+  transform: scale(1.15);
+}
+
+.color-chip--all {
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 0.8em;
+}
+
+.color-chip--all.color-chip--active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.sort-select {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-sm);
+  font-family: inherit;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .notes-grid {

@@ -91,6 +91,29 @@ describe('Post-it notes', () => {
     cy.contains('.postit-card__title', 'Courses (copie)')
   })
 
+  it('filters by color and jumps to the last/first page', () => {
+    const manyNotes = Array.from({ length: 25 }, (_, i) => ({
+      id: String(i + 1),
+      title: `Note ${i + 1}`,
+      content: ['x'],
+      color: i === 0 ? 'blue' : 'yellow',
+    }))
+    cy.intercept('GET', '**/notes', { notes: manyNotes }).as('getManyNotes')
+    cy.visit('/')
+    cy.wait('@getManyNotes')
+
+    cy.contains('.pagination__info', 'Page 1 / 3')
+    cy.contains('button', 'Fin »').click()
+    cy.contains('.pagination__info', 'Page 3 / 3')
+    cy.contains('button', '« Début').click()
+    cy.contains('.pagination__info', 'Page 1 / 3')
+
+    cy.get('.color-chip[aria-label="Bleu"]').click()
+    cy.get('.postit-card').should('have.length', 1)
+    cy.contains('button', 'Toutes').click()
+    cy.get('.postit-card').should('have.length', 9)
+  })
+
   it('toggles between dark and light theme', () => {
     cy.visit('/')
     cy.wait('@getNotes')
